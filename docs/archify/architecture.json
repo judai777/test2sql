@@ -1,0 +1,521 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "Test2SQL · 三层架构组件图",
+    "output": "test2sql-architecture.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "main-path",
+        "label": "取数主路径",
+        "focus": [
+          "user",
+          "repl",
+          "router",
+          "manager",
+          "executor",
+          "tools",
+          "bizdb"
+        ],
+        "note": "一次取数请求：提问 → TaskRequest → 上下文装配 → ReAct 执行 → 只读 SQL → 结果返回。"
+      },
+      {
+        "id": "react-loop",
+        "label": "ReAct 循环",
+        "focus": [
+          "manager",
+          "executor",
+          "guard",
+          "llm",
+          "tools"
+        ],
+        "note": "决策 → 工具调用 → 观察回填 → 再决策；四层防护逐步挂点，步数耗尽强制总结。"
+      },
+      {
+        "id": "memory",
+        "label": "记忆系统",
+        "focus": [
+          "manager",
+          "memdb",
+          "chroma",
+          "bizdb"
+        ],
+        "note": "记忆三层：会话窗口 / 成功 QA 样例（few-shot top-3）/ 业务口径；校验+执行双通过自动入库。"
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "user",
+      "type": "external",
+      "label": "业务人员",
+      "sublabel": "证券/银行·不熟 SQL",
+      "pos": [
+        30,
+        205
+      ],
+      "size": [
+        100,
+        54
+      ]
+    },
+    {
+      "id": "repl",
+      "type": "backend",
+      "label": "REPL",
+      "sublabel": "裸驱动器 ~100 行",
+      "pos": [
+        160,
+        205
+      ],
+      "size": [
+        130,
+        50
+      ]
+    },
+    {
+      "id": "web",
+      "type": "backend",
+      "label": "Web UI",
+      "sublabel": "FastAPI 单页",
+      "pos": [
+        160,
+        320
+      ],
+      "size": [
+        130,
+        50
+      ]
+    },
+    {
+      "id": "router",
+      "type": "backend",
+      "label": "路由层 Router",
+      "sublabel": "意图·权限·会话绑定",
+      "pos": [
+        330,
+        205
+      ],
+      "size": [
+        140,
+        54
+      ],
+      "tag": "路由层·危险拦截"
+    },
+    {
+      "id": "manager",
+      "type": "backend",
+      "label": "管理层 Manager",
+      "sublabel": "上下文·召回·记忆·预算",
+      "pos": [
+        515,
+        205
+      ],
+      "size": [
+        150,
+        54
+      ],
+      "tag": "管理层·零 LLM"
+    },
+    {
+      "id": "executor",
+      "type": "backend",
+      "label": "执行层 Executor",
+      "sublabel": "计划无关 ReAct 引擎",
+      "pos": [
+        705,
+        205
+      ],
+      "size": [
+        150,
+        54
+      ],
+      "tag": "执行层·唯一 LLM"
+    },
+    {
+      "id": "guard",
+      "type": "security",
+      "label": "四层循环防护",
+      "sublabel": "步数·打转·回喂≤2·墙钟",
+      "pos": [
+        705,
+        100
+      ],
+      "size": [
+        150,
+        50
+      ]
+    },
+    {
+      "id": "llm",
+      "type": "cloud",
+      "label": "LLM",
+      "sublabel": "OpenAI 兼容·可切模型",
+      "pos": [
+        900,
+        205
+      ],
+      "size": [
+        110,
+        54
+      ],
+      "tag": "GLM-4.7"
+    },
+    {
+      "id": "tools",
+      "type": "backend",
+      "label": "SQL 工具集",
+      "sublabel": "五件套·sqlglot 校验",
+      "pos": [
+        705,
+        330
+      ],
+      "size": [
+        150,
+        54
+      ],
+      "tag": "只读"
+    },
+    {
+      "id": "chroma",
+      "type": "database",
+      "label": "向量检索（自建）",
+      "sublabel": "SQLite JSON + 余弦",
+      "pos": [
+        515,
+        330
+      ],
+      "size": [
+        120,
+        50
+      ],
+      "tag": "ADR-007"
+    },
+    {
+      "id": "memdb",
+      "type": "database",
+      "label": "记忆存储 SQLite",
+      "sublabel": "会话·样例·口径·审计",
+      "pos": [
+        340,
+        330
+      ],
+      "size": [
+        130,
+        50
+      ]
+    },
+    {
+      "id": "bizdb",
+      "type": "database",
+      "label": "业务库 SQLite",
+      "sublabel": "12~15 表·百万行",
+      "pos": [
+        900,
+        430
+      ],
+      "size": [
+        120,
+        50
+      ],
+      "tag": "LIMIT 100·30s 超时"
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "驱动器（开发期）",
+      "wraps": [
+        "repl",
+        "web"
+      ]
+    },
+    {
+      "kind": "region",
+      "label": "执行层（唯一 LLM 所在）",
+      "wraps": [
+        "executor",
+        "guard",
+        "tools"
+      ]
+    },
+    {
+      "kind": "security-group",
+      "label": "存储与数据",
+      "wraps": [
+        "memdb",
+        "chroma",
+        "bizdb"
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "id": "user-to-repl",
+      "from": "user",
+      "to": "repl",
+      "label": "question",
+      "variant": "emphasis",
+      "labelAt": [
+        145,
+        273
+      ]
+    },
+    {
+      "id": "user-to-web",
+      "from": "user",
+      "to": "web",
+      "label": "question",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "via": [
+        [
+          80,
+          285
+        ],
+        [
+          225,
+          285
+        ]
+      ]
+    },
+    {
+      "id": "repl-to-router",
+      "from": "repl",
+      "to": "router",
+      "label": "TaskRequest",
+      "variant": "emphasis",
+      "labelDy": -21
+    },
+    {
+      "id": "web-to-router",
+      "from": "web",
+      "to": "router",
+      "label": "TaskRequest",
+      "variant": "dashed",
+      "fromSide": "right",
+      "toSide": "bottom",
+      "labelAt": [
+        355,
+        300
+      ]
+    },
+    {
+      "id": "router-to-manager",
+      "from": "router",
+      "to": "manager",
+      "label": "TaskRequest{budget}",
+      "variant": "emphasis",
+      "labelDy": -21
+    },
+    {
+      "id": "manager-to-executor",
+      "from": "manager",
+      "to": "executor",
+      "label": "上下文+工具schema+预算",
+      "variant": "emphasis",
+      "labelDy": -21
+    },
+    {
+      "id": "executor-to-llm",
+      "from": "executor",
+      "to": "llm",
+      "label": "chat(messages, tools)",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          780,
+          172
+        ],
+        [
+          955,
+          172
+        ]
+      ],
+      "labelAt": [
+        872,
+        162
+      ]
+    },
+    {
+      "id": "llm-to-executor",
+      "from": "llm",
+      "to": "executor",
+      "label": "tool_calls · token 流",
+      "variant": "dashed",
+      "fromSide": "top",
+      "toSide": "top",
+      "via": [
+        [
+          955,
+          195
+        ],
+        [
+          780,
+          195
+        ]
+      ],
+      "labelAt": [
+        872,
+        186
+      ]
+    },
+    {
+      "id": "executor-to-guard",
+      "from": "executor",
+      "to": "guard",
+      "label": "防护挂点·每步检查",
+      "variant": "security",
+      "labelAt": [
+        690,
+        177
+      ]
+    },
+    {
+      "id": "executor-to-tools",
+      "from": "executor",
+      "to": "tools",
+      "label": "调用 → 观察回填",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        780,
+        273
+      ]
+    },
+    {
+      "id": "tools-to-bizdb",
+      "from": "tools",
+      "to": "bizdb",
+      "label": "只读 SQL",
+      "variant": "security",
+      "fromSide": "right",
+      "toSide": "left",
+      "via": [
+        [
+          875,
+          357
+        ],
+        [
+          875,
+          455
+        ]
+      ],
+      "labelAt": [
+        915,
+        342
+      ]
+    },
+    {
+      "id": "executor-to-user",
+      "from": "executor",
+      "to": "user",
+      "label": "Answer{SQL·表格·图表}",
+      "variant": "emphasis",
+      "fromSide": "left",
+      "toSide": "left",
+      "via": [
+        [
+          685,
+          232
+        ],
+        [
+          685,
+          460
+        ],
+        [
+          10,
+          460
+        ],
+        [
+          10,
+          232
+        ]
+      ],
+      "labelAt": [
+        370,
+        448
+      ]
+    },
+    {
+      "id": "tools-to-user",
+      "from": "tools",
+      "to": "user",
+      "label": "ask_user 口径澄清",
+      "variant": "dashed",
+      "fromSide": "bottom",
+      "toSide": "bottom",
+      "via": [
+        [
+          780,
+          486
+        ],
+        [
+          80,
+          486
+        ]
+      ],
+      "labelAt": [
+        430,
+        498
+      ]
+    },
+    {
+      "id": "manager-to-memdb",
+      "from": "manager",
+      "to": "memdb",
+      "label": "会话·样例·口径 读写",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        395,
+        302
+      ]
+    },
+    {
+      "id": "manager-to-chroma",
+      "from": "manager",
+      "to": "chroma",
+      "label": "few-shot/口径 召回",
+      "fromSide": "bottom",
+      "toSide": "top",
+      "labelAt": [
+        629,
+        310
+      ]
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "三层职责",
+      "items": [
+        "路由：意图分类 · 权限初检 · 会话串行",
+        "管理层零 LLM：可单测的确定性治理",
+        "执行层：LLM 只在这里；二期快路径 = 强制计划模式"
+      ]
+    },
+    {
+      "dot": "cyan",
+      "title": "工具五件套",
+      "items": [
+        "search_schema / get_schema：向量召回 + 完整 DDL",
+        "validate_sql：sqlglot 白盒校验（补齐 DB-GPT 缺环）",
+        "execute_sql：只读账号 · 强制 LIMIT · 超时",
+        "ask_user：口径歧义澄清，每 turn ≤ 2 次"
+      ]
+    },
+    {
+      "dot": "rose",
+      "title": "护栏与审计",
+      "items": [
+        "四层防护：步数≤12 · 打转检测 · 错误回喂≤2 · 墙钟 300s",
+        "失败降级：转人工 / 提工单（一期留桩）",
+        "审计：谁 · 何时 · 问了什么 · 执行 SQL · 返回行数"
+      ]
+    }
+  ]
+}

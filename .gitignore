@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+db/securities.db
+db/memory.db
+.env
+uv.lock
+.codegraph/
+eval/reports/*
+!eval/reports/SUMMARY.md
